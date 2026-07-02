@@ -1,0 +1,9 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+@import "reactflow/dist/style.css";
+
+* { box-sizing: border-box; }
+body { margin: 0; background: #f6f8fb; color: #17202a; }
+.react-flow__node { border-radius: 8px; border: 1px solid #d9e2ef; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08); }
+.ff-card { border: 1px solid #d9e2ef; background: white; border-radius: 8px; }

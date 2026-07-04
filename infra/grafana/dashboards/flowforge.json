@@ -1,0 +1,18 @@
+{
+  "title": "FlowForge Operations",
+  "schemaVersion": 39,
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "HTTP Requests",
+      "targets": [{ "expr": "flowforge_requests_total" }],
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 }
+    },
+    {
+      "type": "gauge",
+      "title": "Queue Depth",
+      "targets": [{ "expr": "flowforge_queue_depth" }],
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 }
+    }
+  ]
+}

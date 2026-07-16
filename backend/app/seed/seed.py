@@ -67,7 +67,7 @@ def seed() -> None:
 
         workflows: list[Workflow] = []
         for idx, name in enumerate(WORKFLOWS, start=1):
-            workflow = Workflow(owner_id=users["developer"].id, name=name, description=f"Production-style demo workflow for {name.lower()}.", status="published", current_version=4)
+            workflow = Workflow(owner_id=users["developer"].id, name=name, description=f"Demo workflow for {name.lower()}.", status="published", current_version=4)
             db.add(workflow)
             db.flush()
             nodes, edges = sample_graph(idx)

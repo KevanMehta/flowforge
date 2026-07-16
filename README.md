@@ -1,6 +1,6 @@
 # FlowForge
 
-FlowForge is an AI-powered workflow orchestration and execution platform. It demonstrates a production-style control plane for building DAG workflows, validating graph structure, running asynchronous node execution, inspecting logs, managing workflow versions, and monitoring workers.
+FlowForge is an AI-powered workflow orchestration and execution platform. It demonstrates a control plane for building DAG workflows, validating graph structure, running asynchronous node execution, inspecting logs, managing workflow versions, and monitoring workers.
 
 It is a portfolio-grade reference implementation: lighter than Temporal or Airflow, more visual than GitHub Actions, and AI-aware without requiring paid APIs for the local demo.
 
@@ -12,7 +12,7 @@ Browser -> Next.js UI -> FastAPI API -> PostgreSQL
                          |             -> Audit logs, versions, executions
                          -> Redis -> Celery workers -> Node runners
                          -> Prometheus metrics -> Grafana dashboards
-Nginx reverse proxy fronts frontend and API for production-style routing.
+An Nginx reverse proxy routes traffic to the frontend and API.
 ```
 
 ## Tech Stack

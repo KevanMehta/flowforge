@@ -138,3 +138,7 @@ Use Docker Compose for local and single-host deployments. For AWS, start with th
 - Notification nodes simulate email and Slack delivery locally and store notification events in the database.
 - AI nodes use deterministic local fallbacks unless `OPENAI_API_KEY` is provided.
 - Terraform templates are deployment starters, not a complete production landing zone.
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).

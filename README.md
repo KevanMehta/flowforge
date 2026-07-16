@@ -1,69 +1,108 @@
 # FlowForge
 
-FlowForge is an AI-powered workflow orchestration and execution platform. It demonstrates a control plane for building DAG workflows, validating graph structure, running asynchronous node execution, inspecting logs, managing workflow versions, and monitoring workers.
+[![CI](https://github.com/KevanMehta/FlowForge/actions/workflows/ci.yml/badge.svg)](https://github.com/KevanMehta/FlowForge/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-It is a portfolio-grade reference implementation: lighter than Temporal or Airflow, more visual than GitHub Actions, and AI-aware without requiring paid APIs for the local demo.
+FlowForge is a reference implementation of a workflow orchestration system for creating, validating, and running DAG-based workflows.
 
-## Architecture
+![FlowForge dashboard](docs/screenshots/dashboard.png)
 
-```text
-Browser -> Next.js UI -> FastAPI API -> PostgreSQL
-                         |             |
-                         |             -> Audit logs, versions, executions
-                         -> Redis -> Celery workers -> Node runners
-                         -> Prometheus metrics -> Grafana dashboards
-An Nginx reverse proxy routes traffic to the frontend and API.
-```
+## Why I Built This
 
-## Tech Stack
+I built FlowForge to understand the moving parts behind tools like Airflow, Temporal, GitHub Actions, LangGraph, and n8n without copying any one of them directly.
 
-Frontend: Next.js, React, TypeScript, Tailwind CSS, React Flow, TanStack Query, Zustand, Recharts.
+The project focuses on the engineering problems that make workflow systems interesting:
 
-Backend: Python, FastAPI, SQLAlchemy, Alembic, Pydantic, JWT auth, RBAC, Celery, Redis, Prometheus metrics.
+- representing workflows as directed acyclic graphs
+- validating graph structure before execution
+- planning dependency-aware execution
+- recording node-level state, retries, logs, and artifacts
+- exposing enough UI and observability for a reviewer to understand what happened during a run
 
-Infrastructure: Docker Compose, Nginx, PostgreSQL, Redis, Prometheus, Grafana, GitHub Actions, Terraform templates for AWS.
+This is a portfolio project and local demo. Some infrastructure pieces are intentionally simplified and documented in [Tradeoffs](#tradeoffs).
 
 ## Features
 
-- JWT authentication with refresh-token structure and bcrypt password hashing.
-- Roles: admin, developer, viewer.
-- Workflow CRUD, graph validation, versioning, publish, rollback, manual runs.
-- DAG validation for cycles, disconnected nodes, invalid edges, missing triggers, and node configuration.
-- Execution planner with topological levels for parallelizable groups.
-- Celery-ready worker system plus inline local execution for instant demo feedback.
-- Retry, cancel, logs, artifacts, notification events, dead-letter records.
-- AI nodes for summarization, classification, and JSON generation with deterministic local fallback.
-- Health, readiness, metrics, worker heartbeat, queue depth, analytics.
-- React Flow builder with node palette, side-panel config, validation, save, publish, and run.
+- JWT login flow with bcrypt password hashing and role-based access checks.
+- Admin, developer, and viewer roles.
+- Workflow CRUD, graph validation, versioning, publish, rollback, and manual runs.
+- Graph validation for cycles, disconnected nodes, invalid edges, missing trigger nodes, and invalid node configuration.
+- Execution planner that groups independent nodes into topological levels.
+- Celery/Redis worker structure with persisted execution, node execution, retry, log, artifact, dead-letter, and heartbeat records.
+- Inline local execution path so demo runs are visible immediately after `docker compose up --build`.
+- Workflow node registry with trigger, validation, HTTP, transform, AI, conditional, delay, notification, and report node types.
+- AI nodes with deterministic local fallback when `OPENAI_API_KEY` is not set.
+- Prometheus metrics endpoint and Grafana dashboard provisioning.
+- React Flow workflow builder with node palette, edge creation, node configuration, validation, save, publish, and run actions.
+- Dashboard, workflow list/detail, execution detail, logs, timeline, worker health, analytics, admin users, and settings pages.
 
 ## Screenshots
 
-The repository includes screenshots from the local demo environment:
-
-| Dashboard | Workflow Builder |
+| Workflow Builder | Execution Detail |
 | --- | --- |
-| ![Dashboard](docs/screenshots/dashboard.png) | ![Workflow Builder](docs/screenshots/workflow-builder.png) |
+| ![Workflow Builder](docs/screenshots/workflow-builder.png) | ![Execution Detail](docs/screenshots/execution-detail.png) |
 
-| Execution Detail | Worker Health |
+| Worker Health | Dashboard |
 | --- | --- |
-| ![Execution Detail](docs/screenshots/execution-detail.png) | ![Worker Health](docs/screenshots/worker-health.png) |
+| ![Worker Health](docs/screenshots/worker-health.png) | ![Dashboard](docs/screenshots/dashboard.png) |
 
-You can also run the app and open:
+## Architecture
 
-- Dashboard: http://localhost:3000
-- Workflow Builder: http://localhost:3000/workflows/builder
-- Analytics: http://localhost:3000/analytics
-- Worker Health: http://localhost:3000/workers
+```mermaid
+flowchart LR
+    browser["Browser / Next.js UI"]
+    api["FastAPI control plane"]
+    db[("PostgreSQL")]
+    redis[("Redis")]
+    worker["Celery worker"]
+    metrics["/metrics"]
+    prom["Prometheus"]
+    grafana["Grafana"]
 
-## Demo Walkthrough
+    browser --> api
+    api --> db
+    api --> redis
+    redis --> worker
+    worker --> db
+    api --> metrics
+    metrics --> prom
+    prom --> grafana
+```
 
-1. Start the stack with `docker compose up --build`.
-2. Open http://localhost:3000 and sign in as the Admin demo user.
-3. Open **Workflows** and run `Customer Support AI Triage`.
-4. Open **Executions** and select the new execution.
-5. Inspect node status, attempts, timing, logs, and artifacts.
-6. Open **Workflow Builder** to validate, save, publish, and run a visual DAG.
-7. Open **Worker Health** and **Analytics** to review queue and reliability signals.
+The FastAPI service owns authentication, RBAC, workflow APIs, graph validation, execution records, schedules, metrics, analytics, and audit logging.
+
+PostgreSQL stores users, workflows, workflow versions, graph nodes/edges, executions, node executions, logs, artifacts, schedules, worker heartbeats, audit logs, API keys, dead-letter tasks, notification events, and system metrics.
+
+Redis and Celery model the worker plane. The demo also includes an inline execution path so a local reviewer can run workflows without waiting on a distributed worker topology.
+
+More detail is available in:
+
+- [Architecture](docs/architecture.md)
+- [Workflow engine](docs/workflow-engine.md)
+- [API overview](docs/api.md)
+- [Security notes](docs/security.md)
+- [Deployment notes](docs/deployment.md)
+- [Architecture decisions](docs/decisions.md)
+
+## Engineering Decisions
+
+- **FastAPI instead of Spring Boot or Django:** keeps the API layer small, typed, and easy to inspect through generated OpenAPI docs.
+- **PostgreSQL instead of MongoDB:** workflow state is relational: users, versions, executions, node executions, logs, and artifacts benefit from foreign keys and explicit queries.
+- **Redis and Celery instead of Temporal:** Celery is simpler to run in a portfolio repo and makes the queue/worker boundary visible. Temporal would be a better choice for durable production orchestration, but it adds more operational weight than this demo needs.
+- **React Flow for the builder:** graph editing is the core UI interaction, and React Flow provides a proven canvas model without hand-rolling node/edge behavior.
+- **Docker Compose for local setup:** the project needs several services, and Compose keeps the demo reproducible on one machine.
+- **Deterministic AI fallback:** AI nodes should be testable and usable without a paid API key. When `OPENAI_API_KEY` is missing, the project uses local deterministic behavior.
+
+ADR-style notes are in [docs/decisions.md](docs/decisions.md).
+
+## Tradeoffs
+
+- Workflow execution is persisted and worker-aware, but the local demo also runs inline so the UI responds immediately.
+- Notification nodes simulate email and Slack delivery and store events locally.
+- AI node behavior is deterministic unless an OpenAI API key is provided.
+- OAuth-ready structure exists, but external OAuth providers are not wired.
+- Terraform files are deployment starters, not a complete cloud environment.
+- The test suite covers planner, graph validation, local AI node behavior, and a small frontend component test. It is not exhaustive.
 
 ## Local Setup
 
@@ -83,33 +122,20 @@ After startup:
 
 ## Demo Credentials
 
-Admin:
-email: admin@flowforge.dev
-password: Password123!
+```text
+Admin:     admin@flowforge.dev / Password123!
+Developer: developer@flowforge.dev / Password123!
+Viewer:    viewer@flowforge.dev / Password123!
+```
 
-Developer:
-email: developer@flowforge.dev
-password: Password123!
+## Demo Walkthrough
 
-Viewer:
-email: viewer@flowforge.dev
-password: Password123!
-
-## API Documentation
-
-Swagger is available at http://localhost:8000/docs. See [docs/api.md](docs/api.md) for an endpoint overview.
-
-## Architecture Decisions
-
-See [docs/decisions.md](docs/decisions.md) for the main design decisions and tradeoffs behind the stack, local execution model, deterministic AI fallback, and visual builder.
-
-## Worker Architecture
-
-Executions are represented as persisted workflow runs with node execution rows. The planner converts the saved DAG into topological levels. Independent nodes in the same level are parallelizable by Celery workers; the local demo executes them inline so no paid or external service is required. Workers record heartbeats, logs, outputs, artifacts, retries, and dead-letter failures.
-
-## Database Schema Summary
-
-Core tables include users, roles, workflows, workflow_versions, workflow_nodes, workflow_edges, executions, node_executions, execution_logs, execution_artifacts, schedules, worker_heartbeats, audit_logs, api_keys, dead_letter_tasks, notification_events, and system_metrics.
+1. Start the stack with `docker compose up --build`.
+2. Open http://localhost:3000 and sign in as the admin demo user.
+3. Open **Workflows** and inspect one of the seeded workflows.
+4. Open **Workflow Builder** to validate, save, publish, and run a DAG.
+5. Open **Executions** and inspect status, node attempts, logs, and artifacts.
+6. Open **Worker Health** and **Analytics** to review queue and reliability signals.
 
 ## Testing
 
@@ -117,28 +143,48 @@ Core tables include users, roles, workflows, workflow_versions, workflow_nodes, 
 ./scripts/test.sh
 ```
 
-Backend tests use Pytest. Frontend tests use Vitest and React Testing Library.
+The current test suite includes:
 
-## Deployment
+- Pytest coverage for graph validation.
+- Pytest coverage for execution planning.
+- Pytest coverage for deterministic local AI node behavior.
+- Vitest/React Testing Library coverage for a frontend KPI component.
+- GitHub Actions jobs for backend lint/tests, frontend lint/tests/build, and Docker build validation.
 
-Use Docker Compose for local and single-host deployments. For AWS, start with the Terraform templates in `infra/terraform`, then deploy containers to ECS, PostgreSQL to RDS, Redis to ElastiCache, and route traffic through an ALB or Nginx.
+## Project Structure
+
+```text
+backend/   FastAPI app, SQLAlchemy models, routers, services, worker tasks, scheduler, seed data, tests
+frontend/  Next.js app, React Flow builder, API client, hooks, shared UI components, frontend tests
+infra/     Nginx, Prometheus, Grafana, and Terraform starter templates
+docs/      Architecture, API, workflow engine, security, deployment, and decision notes
+scripts/   Local helper scripts for development, seeding, and tests
+.github/   CI workflow, issue templates, pull request template, and Dependabot config
+```
 
 ## Future Improvements
 
-- True distributed fan-out/fan-in execution with Celery chords.
-- WebSocket live execution updates.
-- OAuth providers.
-- More node integrations.
-- Multi-tenant workspace isolation.
+- Replace inline demo execution with full distributed fan-out/fan-in using Celery primitives or a workflow engine.
+- Add WebSocket or Server-Sent Events updates for live execution status.
+- Add OAuth providers.
+- Expand API and frontend tests around RBAC and execution failure paths.
+- Add multi-tenant workspace isolation.
+- Add reproducible benchmark scripts before making performance claims.
 
-## Known Limitations
+## Repository Metadata
 
-- The local demo executes workflows inline after creating persisted execution records so the UI responds immediately. The worker queue is wired for Celery, but full distributed fan-out/fan-in is a future hardening step.
-- OAuth-ready structures are present, but external OAuth providers are not connected.
-- Notification nodes simulate email and Slack delivery locally and store notification events in the database.
-- AI nodes use deterministic local fallbacks unless `OPENAI_API_KEY` is provided.
-- Terraform templates are deployment starters, not a complete production landing zone.
+Recommended GitHub description:
+
+```text
+Reference workflow orchestration app with FastAPI, Celery, Redis, PostgreSQL, and a React Flow builder.
+```
+
+Recommended topics:
+
+```text
+workflow-orchestration, fastapi, celery, redis, postgresql, nextjs, react-flow, typescript, docker, prometheus, grafana, dag, rbac, portfolio-project
+```
 
 ## License
 
-This project is licensed under the [MIT License](LICENSE).
+This project is licensed under the MIT License.

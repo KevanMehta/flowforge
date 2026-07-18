@@ -22,4 +22,8 @@ class ExecutionPlanner:
                     indegree[child] -= 1
                     if indegree[child] == 0:
                         ready.append(child)
-        return {"levels": levels, "nodes": node_lookup, "edges": [edge.model_dump() for edge in graph.edges]}
+        return {
+            "levels": levels,
+            "nodes": node_lookup,
+            "edges": [edge.model_dump() for edge in graph.edges],
+        }

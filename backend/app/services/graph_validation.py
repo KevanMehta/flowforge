@@ -3,7 +3,11 @@ from ..models.enums import NodeType
 from ..schemas.common import WorkflowGraph, ValidationResult
 
 
-TRIGGER_TYPES = {NodeType.webhook_trigger, NodeType.manual_trigger, NodeType.schedule_trigger}
+TRIGGER_TYPES = {
+    NodeType.webhook_trigger,
+    NodeType.manual_trigger,
+    NodeType.schedule_trigger,
+}
 REQUIRED_CONFIG = {
     NodeType.validate_json: ["schema"],
     NodeType.http_request: ["method", "url"],
@@ -36,7 +40,9 @@ class GraphValidationService:
                 trigger_count += 1
             for key in REQUIRED_CONFIG.get(node_type, []):
                 if key not in node.config:
-                    errors.append(f"Node {node.label} is missing required config: {key}.")
+                    errors.append(
+                        f"Node {node.label} is missing required config: {key}."
+                    )
         if trigger_count == 0:
             errors.append("Workflow must include a trigger node.")
 
@@ -44,9 +50,13 @@ class GraphValidationService:
         indegree = {node_id: 0 for node_id in node_ids}
         for edge in graph.edges:
             if edge.source not in node_set:
-                errors.append(f"Edge {edge.id} references missing source {edge.source}.")
+                errors.append(
+                    f"Edge {edge.id} references missing source {edge.source}."
+                )
             if edge.target not in node_set:
-                errors.append(f"Edge {edge.id} references missing target {edge.target}.")
+                errors.append(
+                    f"Edge {edge.id} references missing target {edge.target}."
+                )
             if edge.source == edge.target:
                 errors.append(f"Edge {edge.id} cannot connect a node to itself.")
             if edge.source in node_set and edge.target in node_set:
@@ -70,10 +80,16 @@ class GraphValidationService:
             connected.add(edge.source)
             connected.add(edge.target)
         disconnected = node_set - connected
-        trigger_only = {n.id for n in graph.nodes if n.type in {t.value for t in TRIGGER_TYPES}}
-        disconnected = disconnected - trigger_only if len(graph.nodes) == 1 else disconnected
+        trigger_only = {
+            n.id for n in graph.nodes if n.type in {t.value for t in TRIGGER_TYPES}
+        }
+        disconnected = (
+            disconnected - trigger_only if len(graph.nodes) == 1 else disconnected
+        )
         if disconnected:
-            errors.append(f"Workflow contains disconnected nodes: {', '.join(sorted(disconnected))}.")
+            errors.append(
+                f"Workflow contains disconnected nodes: {', '.join(sorted(disconnected))}."
+            )
 
         if not errors and len(graph.nodes) > 20:
             warnings.append("Large workflows may need additional worker capacity.")

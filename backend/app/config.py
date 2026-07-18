@@ -5,7 +5,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     app_name: str = "FlowForge"
     environment: str = "development"
-    database_url: str = "postgresql+psycopg://flowforge:flowforge@postgres:5432/flowforge"
+    database_url: str = (
+        "postgresql+psycopg://flowforge:flowforge@postgres:5432/flowforge"
+    )
     test_database_url: str = "sqlite+pysqlite:///:memory:"
     redis_url: str = "redis://redis:6379/0"
     jwt_secret: str = "change-me-in-production"
@@ -20,7 +22,9 @@ class Settings(BaseSettings):
 
     @property
     def cors_origin_list(self) -> list[str]:
-        return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+        return [
+            origin.strip() for origin in self.cors_origins.split(",") if origin.strip()
+        ]
 
 
 @lru_cache

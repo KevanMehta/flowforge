@@ -14,15 +14,30 @@ router = APIRouter(prefix="/workflows", tags=["workflows"])
 
 
 def serialize(workflow: Workflow) -> dict:
-    return {"id": str(workflow.id), "name": workflow.name, "description": workflow.description, "status": workflow.status, "current_version": workflow.current_version, "created_at": workflow.created_at, "updated_at": workflow.updated_at, "graph": graph_from_workflow(workflow).model_dump()}
+    return {
+        "id": str(workflow.id),
+        "name": workflow.name,
+        "description": workflow.description,
+        "status": workflow.status,
+        "current_version": workflow.current_version,
+        "created_at": workflow.created_at,
+        "updated_at": workflow.updated_at,
+        "graph": graph_from_workflow(workflow).model_dump(),
+    }
 
 
 @router.post("")
-def create_workflow(payload: WorkflowCreate, db: Session = Depends(get_db), user: User = Depends(require_roles("admin", "developer"))):
+def create_workflow(
+    payload: WorkflowCreate,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_roles("admin", "developer")),
+):
     validation = GraphValidationService().validate(payload.graph)
     if not validation.valid:
         raise HTTPException(status_code=422, detail=validation.errors)
-    workflow = Workflow(owner_id=user.id, name=payload.name, description=payload.description)
+    workflow = Workflow(
+        owner_id=user.id, name=payload.name, description=payload.description
+    )
     db.add(workflow)
     db.flush()
     service = WorkflowService(db)
@@ -40,7 +55,9 @@ def list_workflows(db: Session = Depends(get_db), user: User = Depends(current_u
 
 
 @router.get("/{workflow_id}")
-def get_workflow(workflow_id: str, db: Session = Depends(get_db), user: User = Depends(current_user)):
+def get_workflow(
+    workflow_id: str, db: Session = Depends(get_db), user: User = Depends(current_user)
+):
     workflow = db.get(Workflow, workflow_id)
     if not workflow or (user.role.name != "admin" and workflow.owner_id != user.id):
         raise HTTPException(status_code=404, detail="Workflow not found")
@@ -48,7 +65,12 @@ def get_workflow(workflow_id: str, db: Session = Depends(get_db), user: User = D
 
 
 @router.put("/{workflow_id}")
-def update_workflow(workflow_id: str, payload: WorkflowUpdate, db: Session = Depends(get_db), user: User = Depends(require_roles("admin", "developer"))):
+def update_workflow(
+    workflow_id: str,
+    payload: WorkflowUpdate,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_roles("admin", "developer")),
+):
     workflow = db.get(Workflow, workflow_id)
     if not workflow:
         raise HTTPException(status_code=404, detail="Workflow not found")
@@ -69,7 +91,11 @@ def update_workflow(workflow_id: str, payload: WorkflowUpdate, db: Session = Dep
 
 
 @router.delete("/{workflow_id}")
-def delete_workflow(workflow_id: str, db: Session = Depends(get_db), user: User = Depends(require_roles("admin", "developer"))):
+def delete_workflow(
+    workflow_id: str,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_roles("admin", "developer")),
+):
     workflow = db.get(Workflow, workflow_id)
     if not workflow:
         raise HTTPException(status_code=404, detail="Workflow not found")
@@ -80,7 +106,9 @@ def delete_workflow(workflow_id: str, db: Session = Depends(get_db), user: User 
 
 
 @router.post("/{workflow_id}/validate")
-def validate_workflow(workflow_id: str, db: Session = Depends(get_db), user: User = Depends(current_user)):
+def validate_workflow(
+    workflow_id: str, db: Session = Depends(get_db), user: User = Depends(current_user)
+):
     workflow = db.get(Workflow, workflow_id)
     if not workflow:
         raise HTTPException(status_code=404, detail="Workflow not found")
@@ -88,7 +116,11 @@ def validate_workflow(workflow_id: str, db: Session = Depends(get_db), user: Use
 
 
 @router.post("/{workflow_id}/publish")
-def publish_workflow(workflow_id: str, db: Session = Depends(get_db), user: User = Depends(require_roles("admin", "developer"))):
+def publish_workflow(
+    workflow_id: str,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_roles("admin", "developer")),
+):
     workflow = db.get(Workflow, workflow_id)
     if not workflow:
         raise HTTPException(status_code=404, detail="Workflow not found")
@@ -99,12 +131,31 @@ def publish_workflow(workflow_id: str, db: Session = Depends(get_db), user: User
 
 
 @router.get("/{workflow_id}/versions")
-def versions(workflow_id: str, db: Session = Depends(get_db), user: User = Depends(current_user)):
-    return [{"id": str(v.id), "version": v.version, "validation": v.validation, "created_at": v.created_at} for v in db.scalars(select(WorkflowVersion).where(WorkflowVersion.workflow_id == workflow_id).order_by(WorkflowVersion.version.desc()))]
+def versions(
+    workflow_id: str, db: Session = Depends(get_db), user: User = Depends(current_user)
+):
+    return [
+        {
+            "id": str(v.id),
+            "version": v.version,
+            "validation": v.validation,
+            "created_at": v.created_at,
+        }
+        for v in db.scalars(
+            select(WorkflowVersion)
+            .where(WorkflowVersion.workflow_id == workflow_id)
+            .order_by(WorkflowVersion.version.desc())
+        )
+    ]
 
 
 @router.post("/{workflow_id}/rollback/{version_id}")
-def rollback(workflow_id: str, version_id: str, db: Session = Depends(get_db), user: User = Depends(require_roles("admin", "developer"))):
+def rollback(
+    workflow_id: str,
+    version_id: str,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_roles("admin", "developer")),
+):
     workflow = db.get(Workflow, workflow_id)
     version = db.get(WorkflowVersion, version_id)
     if not workflow or not version:
@@ -112,17 +163,36 @@ def rollback(workflow_id: str, version_id: str, db: Session = Depends(get_db), u
     graph = WorkflowGraph.model_validate(version.graph)
     WorkflowService(db).save_graph(workflow, graph)
     workflow.current_version = version.version
-    audit(db, user, "workflow.rollback", "workflow", workflow_id, {"version_id": version_id})
+    audit(
+        db,
+        user,
+        "workflow.rollback",
+        "workflow",
+        workflow_id,
+        {"version_id": version_id},
+    )
     db.commit()
     return serialize(workflow)
 
 
 @router.post("/{workflow_id}/run")
-def run_workflow(workflow_id: str, payload: RunRequest, db: Session = Depends(get_db), user: User = Depends(require_roles("admin", "developer"))):
+def run_workflow(
+    workflow_id: str,
+    payload: RunRequest,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_roles("admin", "developer")),
+):
     workflow = db.get(Workflow, workflow_id)
     if not workflow:
         raise HTTPException(status_code=404, detail="Workflow not found")
-    execution = ExecutionService(db).start(workflow, graph_from_workflow(workflow), user.id, payload.input_payload, payload.trigger_type)
+    execution = ExecutionService(db).start(
+        workflow,
+        graph_from_workflow(workflow),
+        user.id,
+        payload.input_payload,
+        payload.trigger_type,
+        payload.idempotency_key,
+    )
     audit(db, user, "execution.start", "execution", str(execution.id))
     db.commit()
     return {"id": str(execution.id), "status": execution.status}

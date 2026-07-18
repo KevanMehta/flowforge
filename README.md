@@ -28,7 +28,8 @@ This is a portfolio project and local demo. Some infrastructure pieces are inten
 - Workflow CRUD, graph validation, versioning, publish, rollback, and manual runs.
 - Graph validation for cycles, disconnected nodes, invalid edges, missing trigger nodes, and invalid node configuration.
 - Execution planner that groups independent nodes into topological levels.
-- Celery/Redis worker structure with persisted execution, node execution, retry, log, artifact, dead-letter, and heartbeat records.
+- Celery/Redis worker structure with persisted execution, node execution, retry, lease, log, artifact, dead-letter, and heartbeat records.
+- Execution reliability primitives: idempotency keys, node leases, duplicate-task prevention, retry scheduling, timeout detection, cancellation, and stale lease recovery.
 - Inline local execution path so demo runs are visible immediately after `docker compose up --build`.
 - Workflow node registry with trigger, validation, HTTP, transform, AI, conditional, delay, notification, and report node types.
 - AI nodes with deterministic local fallback when `OPENAI_API_KEY` is not set.
@@ -95,14 +96,15 @@ More detail is available in:
 
 ADR-style notes are in [docs/decisions.md](docs/decisions.md).
 
-## Tradeoffs
+## Engineering Tradeoffs
 
 - Workflow execution is persisted and worker-aware, but the local demo also runs inline so the UI responds immediately.
+- Node leases and retry metadata are modeled in the database. This demonstrates the reliability boundary, but it does not replace a durable workflow engine.
 - Notification nodes simulate email and Slack delivery and store events locally.
 - AI node behavior is deterministic unless an OpenAI API key is provided.
 - OAuth-ready structure exists, but external OAuth providers are not wired.
 - Terraform files are deployment starters, not a complete cloud environment.
-- The test suite covers planner, graph validation, local AI node behavior, and a small frontend component test. It is not exhaustive.
+- The test suite covers planner, graph validation, local AI node behavior, execution state transitions, lease handling, retry/dead-letter behavior, and a small frontend component test. It is not exhaustive.
 
 ## Local Setup
 
@@ -147,9 +149,10 @@ The current test suite includes:
 
 - Pytest coverage for graph validation.
 - Pytest coverage for execution planning.
+- Pytest coverage for execution state transitions, worker lease handling, retry scheduling, and dead-letter behavior.
 - Pytest coverage for deterministic local AI node behavior.
 - Vitest/React Testing Library coverage for a frontend KPI component.
-- GitHub Actions jobs for backend lint/tests, frontend lint/tests/build, and Docker build validation.
+- GitHub Actions jobs for backend lint/format/tests, frontend lint/tests/build, and Docker build validation.
 
 ## Project Structure
 

@@ -4,6 +4,7 @@ Revision ID: 0001_initial
 Revises:
 Create Date: 2026-06-27
 """
+
 from alembic import op
 from app.database import Base
 import app.models  # noqa: F401

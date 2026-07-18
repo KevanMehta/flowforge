@@ -6,12 +6,25 @@ from slowapi.util import get_remote_address
 from slowapi.middleware import SlowAPIMiddleware
 from starlette.responses import JSONResponse
 from .config import get_settings
-from .routers import analytics, auth, executions, schedules, system, users, workflows, workers
+from .routers import (
+    analytics,
+    auth,
+    executions,
+    schedules,
+    system,
+    users,
+    workflows,
+    workers,
+)
 
 
 settings = get_settings()
 limiter = Limiter(key_func=get_remote_address, default_limits=[settings.rate_limit])
-app = FastAPI(title="FlowForge API", version="1.0.0", description="AI-powered workflow orchestration and execution platform.")
+app = FastAPI(
+    title="FlowForge API",
+    version="1.0.0",
+    description="AI-powered workflow orchestration and execution platform.",
+)
 app.state.limiter = limiter
 app.add_middleware(SlowAPIMiddleware)
 app.add_middleware(

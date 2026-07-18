@@ -95,6 +95,7 @@ class ExecutionRead(ORMModel):
 class RunRequest(BaseModel):
     input_payload: dict[str, Any] = {}
     trigger_type: str = "manual"
+    idempotency_key: str | None = Field(default=None, max_length=160)
 
 
 class ScheduleCreate(BaseModel):

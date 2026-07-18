@@ -4,7 +4,7 @@ FlowForge uses a control-plane and worker-plane architecture.
 
 The control plane is FastAPI. It owns authentication, RBAC, workflow CRUD, graph validation, versioning, execution records, logs, metrics, schedules, and analytics.
 
-The worker plane is Celery over Redis. Workers consume execution tasks, run node logic, persist outputs, and report heartbeats. The local demo keeps execution inline after creating the same persisted execution records, which makes `docker compose up --build` usable without tuning distributed queues.
+The worker plane is Celery over Redis. Workers consume execution tasks, run node logic, persist outputs, and report heartbeats. Node executions include idempotency keys, leases, heartbeat timestamps, retry state, timeout bounds, and dead-letter metadata. The local demo keeps execution inline after creating the same persisted execution records, which makes `docker compose up --build` usable without tuning distributed queues.
 
 ```text
 Next.js UI

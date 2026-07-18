@@ -17,7 +17,10 @@ def _text(payload: dict, config: dict) -> str:
 def summarize(payload: dict, config: dict, db: Session, execution_id) -> dict:
     text = _text(payload, config)
     words = text.split()
-    return {"summary": " ".join(words[: min(28, len(words))]), "source_length": len(text)}
+    return {
+        "summary": " ".join(words[: min(28, len(words))]),
+        "source_length": len(text),
+    }
 
 
 def classify(payload: dict, config: dict, db: Session, execution_id) -> dict:
@@ -30,14 +33,21 @@ def classify(payload: dict, config: dict, db: Session, execution_id) -> dict:
 def generate_json(payload: dict, config: dict, db: Session, execution_id) -> dict:
     fields = config.get("fields", ["title", "summary"])
     text = _text(payload, config)
-    return {"json": {field: (text[:120] if field != "word_count" else len(text.split())) for field in fields}}
+    return {
+        "json": {
+            field: (text[:120] if field != "word_count" else len(text.split()))
+            for field in fields
+        }
+    }
 
 
 def validate_json(payload: dict, config: dict, db: Session, execution_id) -> dict:
     schema = config.get("schema", {})
     missing = [field for field in schema.get("required", []) if field not in payload]
     if missing:
-        raise NodeExecutionError(f"Payload missing required fields: {', '.join(missing)}")
+        raise NodeExecutionError(
+            f"Payload missing required fields: {', '.join(missing)}"
+        )
     return {"valid": True, "payload": payload}
 
 
@@ -46,20 +56,36 @@ def http_request(payload: dict, config: dict, db: Session, execution_id) -> dict
     url = config["url"]
     timeout = float(config.get("timeout", 5))
     with httpx.Client(timeout=timeout) as client:
-        response = client.request(method, url, headers=config.get("headers"), json=config.get("body") or payload if method == "POST" else None)
+        response = client.request(
+            method,
+            url,
+            headers=config.get("headers"),
+            json=config.get("body") or payload if method == "POST" else None,
+        )
     return {"status_code": response.status_code, "body": response.text[:2000]}
 
 
 def transform_data(payload: dict, config: dict, db: Session, execution_id) -> dict:
     mapping = config.get("mapping", {})
-    transformed = {target: payload.get(source, default) for target, source_default in mapping.items() for source, default in [source_default if isinstance(source_default, list) else (source_default, None)]}
+    transformed = {
+        target: payload.get(source, default)
+        for target, source_default in mapping.items()
+        for source, default in [
+            source_default
+            if isinstance(source_default, list)
+            else (source_default, None)
+        ]
+    }
     return transformed or payload
 
 
 def conditional_branch(payload: dict, config: dict, db: Session, execution_id) -> dict:
     field = config.get("field", "status")
     equals = config.get("equals", "ok")
-    return {"branch": "true" if str(payload.get(field)) == str(equals) else "false", "payload": payload}
+    return {
+        "branch": "true" if str(payload.get(field)) == str(equals) else "false",
+        "payload": payload,
+    }
 
 
 def delay(payload: dict, config: dict, db: Session, execution_id) -> dict:
@@ -69,20 +95,41 @@ def delay(payload: dict, config: dict, db: Session, execution_id) -> dict:
 
 
 def email_notification(payload: dict, config: dict, db: Session, execution_id) -> dict:
-    event = NotificationEvent(execution_id=execution_id, channel="email", recipient=config["recipient"], subject=config.get("subject", "FlowForge notification"), body=json.dumps(payload))
+    event = NotificationEvent(
+        execution_id=execution_id,
+        channel="email",
+        recipient=config["recipient"],
+        subject=config.get("subject", "FlowForge notification"),
+        body=json.dumps(payload),
+    )
     db.add(event)
     return {"notification": "email", "recipient": config["recipient"], "status": "sent"}
 
 
 def slack_notification(payload: dict, config: dict, db: Session, execution_id) -> dict:
-    event = NotificationEvent(execution_id=execution_id, channel="slack", recipient=config["channel"], subject="Slack notification", body=json.dumps(payload))
+    event = NotificationEvent(
+        execution_id=execution_id,
+        channel="slack",
+        recipient=config["channel"],
+        subject="Slack notification",
+        body=json.dumps(payload),
+    )
     db.add(event)
     return {"notification": "slack", "channel": config["channel"], "status": "sent"}
 
 
 def report_generator(payload: dict, config: dict, db: Session, execution_id) -> dict:
-    content = {"markdown": f"# {config.get('title', 'Workflow Report')}\n\n```json\n{json.dumps(payload, indent=2)}\n```"}
-    db.add(ExecutionArtifact(execution_id=execution_id, name=config.get("title", "report.md"), artifact_type="markdown", content=content))
+    content = {
+        "markdown": f"# {config.get('title', 'Workflow Report')}\n\n```json\n{json.dumps(payload, indent=2)}\n```"
+    }
+    db.add(
+        ExecutionArtifact(
+            execution_id=execution_id,
+            name=config.get("title", "report.md"),
+            artifact_type="markdown",
+            content=content,
+        )
+    )
     return content
 
 

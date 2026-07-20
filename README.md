@@ -174,19 +174,6 @@ scripts/   Local helper scripts for development, seeding, and tests
 - Add multi-tenant workspace isolation.
 - Add reproducible benchmark scripts before making performance claims.
 
-## Repository Metadata
-
-Recommended GitHub description:
-
-```text
-Reference workflow orchestration app with FastAPI, Celery, Redis, PostgreSQL, and a React Flow builder.
-```
-
-Recommended topics:
-
-```text
-workflow-orchestration, fastapi, celery, redis, postgresql, nextjs, react-flow, typescript, docker, prometheus, grafana, dag, rbac, portfolio-project
-```
 
 ## License
 
